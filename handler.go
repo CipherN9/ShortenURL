@@ -6,39 +6,39 @@ import (
 	"net/http"
 )
 
-func HandleResolveLink(repo *LinksRepository) func(http.ResponseWriter, *http.Request) {
+func HandleResolveLink(service *LinksService) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
 		urlLink := ResolveDomain(r) + r.URL.Path
 		log.Printf("Received request for resolve link %s \n", urlLink)
 
-		ctx := r.Context()
-
-		resolvedLinks, err := repo.Get(ctx, &Link{ShortenLink: urlLink})
+		resolved, err := service.ResolveLink(ctx, urlLink)
 
 		if err != nil {
 			http.NotFound(w, r)
 			return
 		}
 
-		http.Redirect(w, r, resolvedLinks[0].InitialLink, http.StatusTemporaryRedirect)
+		http.Redirect(w, r, resolved.InitialLink, http.StatusTemporaryRedirect)
 	}
 }
 
-func HandleGetLinks(repo *LinksRepository) func(http.ResponseWriter, *http.Request) {
+func HandleGetLinks(service *LinksService) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
+
 		log.Println("Handle Get Links")
 
 		w.Header().Set("Content-Type", "application/json")
 
-		var linksResponse []GetLinksResponse
+		links, err := service.GetLinks(ctx, &Filter{})
 
-		ctx := r.Context()
-
-		links, err := repo.Get(ctx, &Link{})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 		}
 
+		var linksResponse []GetLinksResponse
 		for _, link := range links {
 			linksResponse = append(linksResponse, GetLinksResponse{ShortenLink: link.ShortenLink, InitialLink: link.InitialLink})
 		}
@@ -52,13 +52,13 @@ func HandleGetLinks(repo *LinksRepository) func(http.ResponseWriter, *http.Reque
 	}
 }
 
-func HandleLinkShorten(repo *LinksRepository) func(http.ResponseWriter, *http.Request) {
+func HandleLinkShorten(service *LinksService) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
+
 		w.Header().Set("Content-Type", "application/json")
 
 		var l PostLinkPayload
-
 		if err := json.NewDecoder(r.Body).Decode(&l); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -71,7 +71,7 @@ func HandleLinkShorten(repo *LinksRepository) func(http.ResponseWriter, *http.Re
 			return
 		}
 
-		links, err := repo.Get(ctx, &Link{InitialLink: l.Link})
+		links, err := service.GetLinks(ctx, &Filter{InitialLink: l.Link})
 
 		if err != nil {
 			http.Error(w, "Invalid URL", http.StatusBadRequest)
@@ -84,21 +84,13 @@ func HandleLinkShorten(repo *LinksRepository) func(http.ResponseWriter, *http.Re
 			return
 		}
 
-		randNumber, err := RandString(8)
+		shortenLink, err := service.ShortenLink(ctx, l.Link, ResolveDomain(r))
+
 		if err != nil {
-			http.Error(w, "Problem with generating short link", http.StatusBadRequest)
+			http.Error(w, "Problem with adding link to database", http.StatusBadRequest)
 		}
 
-		newLink := ResolveDomain(r) + "/" + randNumber
-
-		err = repo.Add(ctx, &Link{InitialLink: l.Link, ShortenLink: newLink})
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-		}
-
-		log.Printf("New shortened link: %s", newLink)
-
-		if err := json.NewEncoder(w).Encode(&PostLinkResponse{Link: newLink}); err != nil {
+		if err := json.NewEncoder(w).Encode(&PostLinkResponse{Link: shortenLink}); err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
