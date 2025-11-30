@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func run() error {
@@ -15,15 +15,15 @@ func run() error {
 	dsn := os.Getenv("PG_ADDR")
 	fmt.Printf("ENV: %s \n", dsn)
 
-	conn, err := pgx.Connect(ctx, dsn)
+	pool, err := pgxpool.New(ctx, dsn)
 
 	if err != nil {
 		log.Fatal("Could not connect to database.", err)
 	}
 
-	defer conn.Close(ctx)
+	defer pool.Close()
 
-	repo := LinksRepository{Conn: conn}
+	repo := LinksRepository{Pool: pool}
 
 	router := http.NewServeMux()
 	router.HandleFunc("GET /{shorten}", HandleResolveLink(&repo))

@@ -54,6 +54,7 @@ func HandleGetLinks(repo *LinksRepository) func(http.ResponseWriter, *http.Reque
 
 func HandleLinkShorten(repo *LinksRepository) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx := r.Context()
 		w.Header().Set("Content-Type", "application/json")
 
 		var l PostLinkPayload
@@ -70,6 +71,19 @@ func HandleLinkShorten(repo *LinksRepository) func(http.ResponseWriter, *http.Re
 			return
 		}
 
+		links, err := repo.Get(ctx, &Link{InitialLink: l.Link})
+
+		if err != nil {
+			http.Error(w, "Invalid URL", http.StatusBadRequest)
+		}
+
+		if len(links) == 1 {
+			if err := json.NewEncoder(w).Encode(&PostLinkResponse{Link: links[0].ShortenLink}); err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+			}
+			return
+		}
+
 		randNumber, err := RandString(8)
 		if err != nil {
 			http.Error(w, "Problem with generating short link", http.StatusBadRequest)
@@ -77,7 +91,6 @@ func HandleLinkShorten(repo *LinksRepository) func(http.ResponseWriter, *http.Re
 
 		newLink := ResolveDomain(r) + "/" + randNumber
 
-		ctx := r.Context()
 		err = repo.Add(ctx, &Link{InitialLink: l.Link, ShortenLink: newLink})
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusBadRequest)

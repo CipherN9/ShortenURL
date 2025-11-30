@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Link struct {
@@ -17,11 +17,11 @@ type Link struct {
 }
 
 type LinksRepository struct {
-	Conn *pgx.Conn
+	Pool *pgxpool.Pool
 }
 
 func (r *LinksRepository) Add(ctx context.Context, l *Link) error {
-	_, err := r.Conn.Exec(ctx, `INSERT INTO links (id, initial_link, shorten_link) VALUES ($1, $2, $3)`,
+	_, err := r.Pool.Exec(ctx, `INSERT INTO links (id, initial_link, shorten_link) VALUES ($1, $2, $3)`,
 		uuid.New(), l.InitialLink, l.ShortenLink)
 
 	if err != nil {
@@ -61,7 +61,7 @@ func (r *LinksRepository) Get(ctx context.Context, filter *Link) ([]Link, error)
 		baseQuery = baseQuery + " WHERE " + strings.Join(conditions, " AND ")
 	}
 
-	rows, err := r.Conn.Query(ctx, baseQuery, args...)
+	rows, err := r.Pool.Query(ctx, baseQuery, args...)
 
 	if err != nil {
 		log.Fatal("Links query failed: ", err)
