@@ -10,15 +10,21 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+type ILinksRepository interface {
+	Add(context.Context, *Link) error
+	Get(context.Context, *Filter) ([]Link, error)
+}
+type LinksRepository struct {
+	Pool *pgxpool.Pool
+}
+
 type Link struct {
 	Id          uuid.UUID
 	InitialLink string
 	ShortenLink string
 }
 
-type LinksRepository struct {
-	Pool *pgxpool.Pool
-}
+type Filter Link
 
 func (r *LinksRepository) Add(ctx context.Context, l *Link) error {
 	_, err := r.Pool.Exec(ctx, `INSERT INTO links (id, initial_link, shorten_link) VALUES ($1, $2, $3)`,
@@ -31,7 +37,7 @@ func (r *LinksRepository) Add(ctx context.Context, l *Link) error {
 	return err
 }
 
-func (r *LinksRepository) Get(ctx context.Context, filter *Link) ([]Link, error) {
+func (r *LinksRepository) Get(ctx context.Context, filter *Filter) ([]Link, error) {
 	baseQuery := `SELECT id, initial_link, shorten_link FROM links`
 
 	var conditions []string

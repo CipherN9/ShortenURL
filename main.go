@@ -23,12 +23,13 @@ func run() error {
 
 	defer pool.Close()
 
-	repo := LinksRepository{Pool: pool}
+	repo := LinksRepository{pool}
+	service := LinksService{&repo}
 
 	router := http.NewServeMux()
-	router.HandleFunc("GET /{shorten}", HandleResolveLink(&repo))
-	router.HandleFunc("GET /links", HandleGetLinks(&repo))
-	router.HandleFunc("POST /links/shorten", HandleLinkShorten(&repo))
+	router.HandleFunc("GET /{shorten}", HandleResolveLink(&service))
+	router.HandleFunc("GET /links", HandleGetLinks(&service))
+	router.HandleFunc("POST /links/shorten", HandleLinkShorten(&service))
 
 	server := http.Server{Addr: ":8080", Handler: router}
 	log.Println("Start server on port 8080")
