@@ -72,20 +72,6 @@ func HandleLinkShorten(service ILinksService) func(http.ResponseWriter, *http.Re
 			return
 		}
 
-		links, err := service.GetLinks(ctx, &Filter{InitialLink: l.Link})
-
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		if len(links) == 1 {
-			if err := json.NewEncoder(w).Encode(PostLinkResponse{Link: links[0].ShortenLink}); err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-			}
-			return
-		}
-
 		shortenLink, err := service.ShortenLink(ctx, l.Link, ResolveDomain(r))
 
 		if err != nil {
@@ -93,7 +79,7 @@ func HandleLinkShorten(service ILinksService) func(http.ResponseWriter, *http.Re
 			return
 		}
 
-		if err := json.NewEncoder(w).Encode(PostLinkResponse{Link: shortenLink}); err != nil {
+		if err := json.NewEncoder(w).Encode(PostLinkResponse{Link: shortenLink.ShortenLink}); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}

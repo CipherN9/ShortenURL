@@ -11,7 +11,7 @@ import (
 )
 
 type ILinksRepository interface {
-	Add(context.Context, *Link) error
+	Add(context.Context, Link) (*Link, error)
 	Get(context.Context, *Filter) ([]Link, error)
 }
 type LinksRepository struct {
@@ -26,15 +26,25 @@ type Link struct {
 
 type Filter Link
 
-func (r *LinksRepository) Add(ctx context.Context, l *Link) error {
-	_, err := r.Pool.Exec(ctx, `INSERT INTO links (id, initial_link, shorten_link) VALUES ($1, $2, $3)`,
-		uuid.New(), l.InitialLink, l.ShortenLink)
+func (r *LinksRepository) Add(ctx context.Context, l Link) (*Link, error) {
+	stmt := `WITH INS AS (INSERT INTO links (id, initial_link, shorten_link) 
+			              VALUES ($1, $2, $3) ON CONFLICT DO NOTHING
+                          RETURNING id, initial_link, shorten_link)
+
+		     SELECT * FROM INS
+             UNION
+			 SELECT id, initial_link, shorten_link FROM links WHERE initial_link=$2;`
+	var result Link
+
+	err := r.Pool.QueryRow(ctx, stmt, uuid.New(), l.InitialLink, l.ShortenLink).Scan(&result.Id, &result.InitialLink,
+		&result.ShortenLink)
 
 	if err != nil {
 		log.Printf("Insert failed: %v", err)
+		return nil, err
 	}
 
-	return err
+	return &result, err
 }
 
 func (r *LinksRepository) Get(ctx context.Context, filter *Filter) ([]Link, error) {
