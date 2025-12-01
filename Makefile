@@ -1,4 +1,4 @@
-PG_ADDR=postgresql://odore:odore@localhost:5432/go_database?sslmode=disable
+PG_ADDR=your-database
 
 migrate-up:
 	go run -tags 'postgres,file' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.17.0 \
