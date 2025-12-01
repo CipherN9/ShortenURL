@@ -2,9 +2,12 @@ package short_links
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os/exec"
+
+	"github.com/jackc/pgx/v5"
 )
 
 type ILinksService interface {
@@ -39,17 +42,27 @@ func (s *LinksService) GetLinks(ctx context.Context, f *Filter) ([]Link, error) 
 }
 
 func (s *LinksService) ShortenLink(ctx context.Context, initialLink string, domain string) (*Link, error) {
-	randNumber, err := RandString(8)
-	if err != nil {
-		return nil, fmt.Errorf("problem with generating short link %v", err)
-	}
+	maxRetries := 5
+	var createdLink *Link
 
-	shortenLink := domain + "/" + randNumber
+	for i := 0; i < maxRetries; i++ {
+		slug, err := RandSlug(8)
+		if err != nil {
+			return nil, fmt.Errorf("problem with generating short link %v", err)
+		}
 
-	createdLink, err := s.Repo.Add(ctx, Link{InitialLink: initialLink, ShortenLink: shortenLink})
+		shortenLink := domain + "/" + slug
 
-	if err != nil {
-		return nil, err
+		createdLink, err = s.Repo.Add(ctx, Link{InitialLink: initialLink, ShortenLink: shortenLink})
+
+		// In case there is collision during RandString slug generation.
+		if errors.Is(err, pgx.ErrNoRows) {
+			continue
+		}
+
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+			return nil, err
+		}
 	}
 
 	log.Printf("New shortened link: %s", createdLink.ShortenLink)

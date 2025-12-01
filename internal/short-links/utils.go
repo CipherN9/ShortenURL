@@ -21,7 +21,7 @@ func IsValidURL(s string) bool {
 	return true
 }
 
-func RandString(n int) (string, error) {
+func RandSlug(n int) (string, error) {
 	b := make([]byte, n)
 	if _, err := rand.Read(b); err != nil {
 		return "", err
