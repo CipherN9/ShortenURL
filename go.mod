@@ -1,4 +1,4 @@
-module RestProject
+module github.com/CipherN9/go-url-shortener
 
 go 1.25
 

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -13,7 +12,6 @@ import (
 func run() error {
 	ctx := context.Background()
 	dsn := os.Getenv("PG_ADDR")
-	fmt.Printf("ENV: %s \n", dsn)
 
 	pool, err := pgxpool.New(ctx, dsn)
 
