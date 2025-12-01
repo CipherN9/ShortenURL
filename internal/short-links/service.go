@@ -1,4 +1,4 @@
-package main
+package short_links
 
 import (
 	"context"
@@ -13,7 +13,7 @@ type ILinksService interface {
 	ShortenLink(context.Context, string, string) (*Link, error)
 }
 type LinksService struct {
-	repo ILinksRepository
+	Repo ILinksRepository
 }
 
 func (s *LinksService) ResolveLink(ctx context.Context, url string) (*Link, error) {
@@ -30,7 +30,7 @@ func (s *LinksService) ResolveLink(ctx context.Context, url string) (*Link, erro
 }
 
 func (s *LinksService) GetLinks(ctx context.Context, f *Filter) ([]Link, error) {
-	links, err := s.repo.Get(ctx, f)
+	links, err := s.Repo.Get(ctx, f)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ func (s *LinksService) ShortenLink(ctx context.Context, initialLink string, doma
 
 	shortenLink := domain + "/" + randNumber
 
-	createdLink, err := s.repo.Add(ctx, Link{InitialLink: initialLink, ShortenLink: shortenLink})
+	createdLink, err := s.Repo.Add(ctx, Link{InitialLink: initialLink, ShortenLink: shortenLink})
 
 	if err != nil {
 		return nil, err
