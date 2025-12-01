@@ -1,0 +1,15 @@
+@host=localhost:8080
+
+### Get short links:
+GET {{host}}/links
+
+###
+
+### Post shorten link
+POST {{host}}/links/shorten
+Content-Type: application/json
+
+{
+    "link": "https://www.google.com"
+}
+
