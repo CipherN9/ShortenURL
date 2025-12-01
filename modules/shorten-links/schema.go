@@ -1,4 +1,4 @@
-package main
+package shorten_links
 
 type PostLinkPayload struct {
 	Link string `json:"link"`

@@ -1,4 +1,4 @@
-package main
+package shorten_links
 
 import (
 	"context"
