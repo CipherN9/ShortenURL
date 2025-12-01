@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS idx_links_initial_link_unique ON links(initial_link);

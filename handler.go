@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-func HandleResolveLink(service *LinksService) func(http.ResponseWriter, *http.Request) {
+func HandleResolveLink(service ILinksService) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
@@ -24,7 +24,7 @@ func HandleResolveLink(service *LinksService) func(http.ResponseWriter, *http.Re
 	}
 }
 
-func HandleGetLinks(service *LinksService) func(http.ResponseWriter, *http.Request) {
+func HandleGetLinks(service ILinksService) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
@@ -32,10 +32,11 @@ func HandleGetLinks(service *LinksService) func(http.ResponseWriter, *http.Reque
 
 		w.Header().Set("Content-Type", "application/json")
 
-		links, err := service.GetLinks(ctx, &Filter{})
+		links, err := service.GetLinks(ctx, nil)
 
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 
 		var linksResponse []GetLinksResponse
@@ -45,14 +46,14 @@ func HandleGetLinks(service *LinksService) func(http.ResponseWriter, *http.Reque
 
 		log.Printf("Links response: %+v", linksResponse)
 
-		if err := json.NewEncoder(w).Encode(&linksResponse); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+		if err := json.NewEncoder(w).Encode(linksResponse); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	}
 }
 
-func HandleLinkShorten(service *LinksService) func(http.ResponseWriter, *http.Request) {
+func HandleLinkShorten(service ILinksService) func(http.ResponseWriter, *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx := r.Context()
 
@@ -71,27 +72,15 @@ func HandleLinkShorten(service *LinksService) func(http.ResponseWriter, *http.Re
 			return
 		}
 
-		links, err := service.GetLinks(ctx, &Filter{InitialLink: l.Link})
-
-		if err != nil {
-			http.Error(w, "Invalid URL", http.StatusBadRequest)
-		}
-
-		if len(links) == 1 {
-			if err := json.NewEncoder(w).Encode(&PostLinkResponse{Link: links[0].ShortenLink}); err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-			}
-			return
-		}
-
 		shortenLink, err := service.ShortenLink(ctx, l.Link, ResolveDomain(r))
 
 		if err != nil {
-			http.Error(w, "Problem with adding link to database", http.StatusBadRequest)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 
-		if err := json.NewEncoder(w).Encode(&PostLinkResponse{Link: shortenLink}); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+		if err := json.NewEncoder(w).Encode(PostLinkResponse{Link: shortenLink.ShortenLink}); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 	}
